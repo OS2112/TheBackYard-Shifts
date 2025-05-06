@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+  <title>מערכת שיבוץ מלצרים</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; padding: 20px; direction: rtl; }
+    .table td, .table th { vertical-align: middle; text-align: center; }
+    .btn { margin: 5px; }
+    .section { margin-bottom: 40px; }
+    h1, h2 { color: #343a40; }
+    .text-danger { color: red; font-weight: bold; }
+    .highlight-green { color: green; font-weight: bold; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1 class="my-4">📋 מערכת שיבוץ מלצרים</h1>
+
+  <div class="section">
+    <h2>1. הוסף אירועים</h2>
+    <table class="table table-bordered" id="eventTable">
+      <thead class="table-light">
+        <tr><th>יום</th><th>תאריך</th><th>משמרת</th><th>מס' מלצרים</th><th>מחק</th></tr>
+      </thead>
+      <tbody id="eventBody"></tbody>
+    </table>
+    <button class="btn btn-primary" onclick="addEventRow()">➕ הוסף אירוע</button>
+    <button class="btn btn-danger" onclick="clearAllEvents()">🗑️ מחק את כל האירועים</button>
+  </div>
+
+  <div class="section">
+    <h2>2. זמינות מלצרים</h2>
+    <table class="table table-bordered" id="availabilityTable">
+      <thead class="table-light">
+        <tr id="availabilityHeader"><th>שם מלצר</th></tr>
+      </thead>
+      <tbody id="availabilityBody"></tbody>
+    </table>
+    <div class="input-group">
+      <input type="text" class="form-control" id="newWaiter" placeholder="שם מלצר חדש">
+      <button class="btn btn-success" onclick="addWaiter()">➕ הוסף מלצר</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <button class="btn btn-info" onclick="generateSchedule()">📋 חשב שיבוץ</button>
+  </div>
+
+  <div class="section">
+    <h2>3. שיבוץ</h2>
+    <table class="table table-bordered" id="resultTable">
+      <thead class="table-light">
+        <tr><th>יום</th><th>תאריך</th><th>משמרת</th><th>מלצרים שובצו</th></tr>
+      </thead>
+      <tbody id="resultBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const fixedWaiters = ["רם", "עדי ל", "שאנל א", "גל נ", "איתי ג", "קים א"];
+
+  function addEventRow() {
+    const tbody = document.getElementById('eventBody');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><input type="text" class="form-control" placeholder="ראשון"></td>
+      <td><input type="text" class="form-control" placeholder="04.05"></td>
+      <td>
+        <select class="form-select">
+          <option>בוקר</option>
+          <option selected>ערב</option>
+          <option>צהריים</option>
+        </select>
+      </td>
+      <td><input type="number" class="form-control" min="1" value="3"></td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); updateAvailabilityHeaders();">מחק</button></td>
+    `;
+    tbody.appendChild(row);
+    updateAvailabilityHeaders();
+  }
+
+  function clearAllEvents() {
+    document.getElementById('eventBody').innerHTML = "";
+    updateAvailabilityHeaders();
+  }
+
+  function updateAvailabilityHeaders() {
+    const header = document.getElementById('availabilityHeader');
+    const eventRows = document.querySelectorAll('#eventBody tr');
+    const shiftLabels = Array.from(eventRows).map(row => {
+      const day = row.cells[0].querySelector('input').value;
+      const shift = row.cells[2].querySelector('select').value;
+      return `${day} ${shift}`;
+    });
+
+    while (header.cells.length > 1) header.deleteCell(1);
+    shiftLabels.forEach(label => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      header.appendChild(th);
+    });
+
+    const body = document.getElementById('availabilityBody');
+    Array.from(body.rows).forEach(row => {
+      while (row.cells.length > 1) row.deleteCell(1);
+      shiftLabels.forEach(() => {
+        const td = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'form-check-input';
+        td.appendChild(checkbox);
+        row.appendChild(td);
+      });
+    });
+  }
+
+  function addWaiter() {
+    const name = document.getElementById('newWaiter').value.trim();
+    if (!name) return;
+    const tbody = document.getElementById('availabilityBody');
+    const row = document.createElement('tr');
+    const nameCell = document.createElement('td');
+    nameCell.innerHTML = `${name} <button class='btn btn-sm btn-outline-danger ms-2' onclick='this.closest("tr").remove()'>🗑️</button>`;
+    row.appendChild(nameCell);
+    const shifts = document.getElementById('availabilityHeader').cells.length - 1;
+    for (let i = 0; i < shifts; i++) {
+      const td = document.createElement('td');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'form-check-input';
+      td.appendChild(checkbox);
+      row.appendChild(td);
+    }
+    tbody.appendChild(row);
+    document.getElementById('newWaiter').value = "";
+  }
+
+  function loadFixedWaiters() {
+    fixedWaiters.forEach(name => {
+      document.getElementById('newWaiter').value = name;
+      addWaiter();
+    });
+  }
+
+  function generateSchedule() {
+    const events = [];
+    document.querySelectorAll('#eventBody tr').forEach(row => {
+      const day = row.cells[0].querySelector('input').value;
+      const date = row.cells[1].querySelector('input').value;
+      const shift = row.cells[2].querySelector('select').value;
+      const needed = parseInt(row.cells[3].querySelector('input').value);
+      events.push({ day, date, shift, needed, label: `${day} ${shift}` });
+    });
+
+    const waiters = [];
+    document.querySelectorAll('#availabilityBody tr').forEach(row => {
+      const name = row.cells[0].textContent.trim();
+      const availability = [];
+      for (let i = 1; i < row.cells.length; i++) {
+        const checked = row.cells[i].querySelector('input').checked;
+        if (checked) availability.push(document.getElementById('availabilityHeader').cells[i].textContent);
+      }
+      waiters.push({ name, availability, count: 0, assignedDays: [] });
+    });
+
+    const resultBody = document.getElementById('resultBody');
+    resultBody.innerHTML = "";
+
+    events.forEach(event => {
+      const available = waiters.filter(w => w.availability.includes(event.label));
+      available.sort((a, b) => a.count - b.count);
+      const selected = available.slice(0, event.needed);
+      selected.forEach(w => {
+        w.count++;
+        w.assignedDays.push(event.day);
+      });
+
+      const row = document.createElement('tr');
+      let waiterNames = selected.map(w => {
+        const isDouble = w.assignedDays.filter(d => d === event.day).length > 1;
+        return isDouble ? `<span class='highlight-green'>${w.name}</span>` : w.name;
+      });
+
+      row.innerHTML = `
+        <td>${event.day}</td>
+        <td>${event.date}</td>
+        <td>${event.shift}</td>
+        <td>${waiterNames.join(', ')}${selected.length < event.needed ? `<br><span class='text-danger'>חסרים ${event.needed - selected.length} מלצרים</span>` : ""}</td>
+      `;
+      resultBody.appendChild(row);
+    });
+
+    alert("השיבוץ הושלם בהצלחה!");
+  }
+
+  addEventRow();
+  loadFixedWaiters();
+</script>
+</body>
+</html>
