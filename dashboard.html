@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>דשבורד זמינות מלצרים</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAdSPsHFO4g7iNxT-pZlTZkMkoyiKyXjqQ",
+      authDomain: "thebackyardshifts.firebaseapp.com",
+      databaseURL: "https://thebackyardshifts-default-rtdb.firebaseio.com",
+      projectId: "thebackyardshifts",
+      storageBucket: "thebackyardshifts.firebasestorage.app",
+      messagingSenderId: "538356916981",
+      appId: "1:538356916981:web:40072b23271abd68f45bbc",
+      measurementId: "G-3N5KB9XQF4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const shifts = [
+      "ראשון ערב",
+      "שני ערב",
+      "שלישי ערב",
+      "רביעי ערב",
+      "חמישי ערב",
+      "שישי צהריים",
+      "שבת ערב"
+    ];
+
+    window.onload = async () => {
+      const snapshot = await get(child(ref(db), "availability"));
+      const data = snapshot.val();
+
+      const table = document.getElementById("resultBody");
+
+      for (const name in data) {
+        const row = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        nameCell.textContent = name;
+        row.appendChild(nameCell);
+
+        shifts.forEach(shift => {
+          const cell = document.createElement("td");
+          cell.textContent = data[name][shift] ? "✔️" : "";
+          row.appendChild(cell);
+        });
+
+        table.appendChild(row);
+      }
+    };
+  </script>
+</head>
+<body style="direction: rtl; font-family: sans-serif; padding: 20px;">
+  <h2>📊 זמינות מלצרים לשבוע</h2>
+  <table border="1" cellpadding="8" style="border-collapse: collapse; text-align: center;">
+    <thead>
+      <tr>
+        <th>שם מלצר</th>
+        <th>ראשון ערב</th>
+        <th>שני ערב</th>
+        <th>שלישי ערב</th>
+        <th>רביעי ערב</th>
+        <th>חמישי ערב</th>
+        <th>שישי צהריים</th>
+        <th>שבת ערב</th>
+      </tr>
+    </thead>
+    <tbody id="resultBody"></tbody>
+  </table>
+</body>
+</html>
